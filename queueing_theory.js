@@ -240,6 +240,29 @@ function updateDynamicFields() {
     }
 }
 
+function updateProbabilityVisibility() {
+    const model = currentState.model;
+    const supportMap = {
+        'mm1': { pn: true, pnGr: true, pWt: true, pWqt: true },
+        'mms': { pn: true, pnGr: false, pWt: true, pWqt: true },
+        'mm1k': { pn: true, pnGr: false, pWt: false, pWqt: false },
+        'mmsk': { pn: true, pnGr: false, pWt: false, pWqt: false },
+        'mg1': { pn: true, pnGr: false, pWt: false, pWqt: false },
+        'finitePop': { pn: true, pnGr: false, pWt: false, pWqt: false },
+        'mmsFinitePop': { pn: true, pnGr: false, pWt: false, pWqt: false }
+    };
+    
+    const support = supportMap[model] || { pn: true, pnGr: true, pWt: true, pWqt: true };
+    
+    // Ocultar/mostrar cards (precisa de IDs nos containers)
+    document.querySelectorAll('.probability-card').forEach(card => {
+        const type = card.dataset.probType; // 'pn', 'pnGr', 'pWt', 'pWqt'
+        card.style.display = support[type] ? 'block' : 'none';
+    });
+}
+
+// Chamar em computeAll() e em updateDynamicFields()
+
 function computeAll() {
     const model = document.getElementById('modelType').value;
     let lambda = getNumber('lambda', 3.0);
@@ -447,6 +470,7 @@ function computeAll() {
         document.getElementById('Wval').innerHTML = '∞';
         document.getElementById('Wqval').innerHTML = '∞';
         document.getElementById('extraMetrics').innerHTML = '<div class="note">⚠️ Sistema instável! Aumente μ ou reduza λ.</div>';
+        updateProbabilityVisibility();
         return;
     }
     
@@ -474,6 +498,7 @@ function computeAll() {
     }
     
     document.getElementById('extraMetrics').innerHTML = extra;
+    updateProbabilityVisibility();
 }
 
 // ==================== ATUALIZAR PROBABILIDADES ====================
@@ -550,3 +575,4 @@ updatePn();
 updatePnGr();
 updatePWt();
 updatePWqt();
+updateProbabilityVisibility();

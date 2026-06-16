@@ -256,7 +256,7 @@
                 
                 <div class="grid-4col">
                     <!-- P(n) -->
-                    <div class="stat-card">
+                    <div class="stat-card probability-card" data-prob-type="pn">
                         <div class="stat-title">P(n) - Prob. de n clientes</div>
                         <div class="input-group">
                             <input type="number" id="nValue" step="any" value="2" placeholder="n">
@@ -266,7 +266,7 @@
                     </div>
 
                     <!-- P(n > r) -->
-                    <div class="stat-card">
+                    <div class="stat-card probability-card" data-prob-type="pnGr">
                         <div class="stat-title">P(n > r) - Prob. mais que r</div>
                         <div class="input-group">
                             <input type="number" id="rValue" step="any" value="3" placeholder="r">
@@ -276,7 +276,7 @@
                     </div>
 
                     <!-- P(W > t) -->
-                    <div class="stat-card">
+                    <div class="stat-card probability-card" data-prob-type="pWt">
                         <div class="stat-title">P(W > t) - Tempo sistema > t</div>
                         <div class="input-group">
                             <input type="number" id="tValueW" step="any" value="0.5" placeholder="t">
@@ -286,7 +286,7 @@
                     </div>
 
                     <!-- P(Wq > t) -->
-                    <div class="stat-card">
+                    <div class="stat-card probability-card" data-prob-type="pWqt">
                         <div class="stat-title">P(Wq > t) - Espera fila > t</div>
                         <div class="input-group">
                             <input type="number" id="tValueWq" step="any" value="0.5" placeholder="t">
