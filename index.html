@@ -203,12 +203,12 @@
 </head>
 <body>
 <div class="app-container">
-    <h1>📊 Teoria de Filas · Kendall-Lee</h1>
+    <h1>Teoria de Filas · Kendall-Lee</h1>
     <div class="sub">M/M/1 · M/M/s · M/M/1/K · M/M/s/K · M/G/1 · População Finita | P(n), P(n>r), P(W>t), P(Wq>t)</div>
 
     <div class="dashboard">
         <div class="control-panel">
-            <label>📌 Modelo de fila</label>
+            <label> Modelo de fila</label>
             <select id="modelType">
                 <option value="mm1">M/M/1 (Fila infinita, 1 servidor)</option>
                 <option value="mms">M/M/s (s servidores paralelos)</option>
@@ -217,26 +217,28 @@
                 <option value="mg1">M/G/1 (Pollaczek-Khintchine)</option>
                 <option value="finitePop">M/M/1 com população finita N</option>
                 <option value="mmsFinitePop">M/M/s > 1 com população finita N (s servidores, N total)</option>
+                <option value="priorityNoInterrupt"> Prioridade SEM interrupção (k classes)</option>
+                <option value="priorityInterrupt"> Prioridade COM interrupção (k classes)</option>
             </select>
 
-            <label>📈 λ (taxa de chegadas / tempo)</label>
+            <label>λ (taxa de chegadas / tempo)</label>
             <input type="number" id="lambda" step="any" value="3.0" placeholder="λ">
 
-            <label>⚙️ μ (taxa de serviço / tempo)</label>
+            <label>μ (taxa de serviço / tempo)</label>
             <input type="number" id="mu" step="any" value="4.0" placeholder="μ">
 
             <div id="dynamicParams"></div>
 
             <button id="calcBtn">⟳ Calcular todas as métricas</button>
             <div class="note">
-                💡 ρ = λ/(s·μ). Para M/G/1 informe a variância σ².<br>
-                ✔️ As probabilidades são recalculadas automaticamente ao alterar n, r ou t.
+                ρ = λ/(s·μ). Para M/G/1 informe a variância σ².<br>
+                As probabilidades são recalculadas automaticamente ao alterar n, r ou t.
             </div>
         </div>
 
         <div class="results-panel">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0 0 12px 0;">📐 Medidas de Efetividade</h3>
+                <h3 style="margin: 0 0 12px 0;">Medidas de Efetividade</h3>
                 <span class="badge" id="stabilityBadge">⚖️ Estável</span>
             </div>
 
@@ -252,7 +254,7 @@
 
             <!-- Seção de Probabilidades -->
             <div class="probability-section">
-                <div class="probability-title">🎲 Probabilidades Avançadas</div>
+                <div class="probability-title">Probabilidades Avançadas</div>
                 
                 <div class="grid-4col">
                     <!-- P(n) -->

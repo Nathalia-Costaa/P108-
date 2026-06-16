@@ -13,7 +13,11 @@ let currentState = {
     rho: 0.75,
     P0: 0.25,
     lambda_efetiva: 3.0,
-    isStable: true
+    isStable: true,
+    // ===== NOVAS PROPRIEDADES =====
+    k: 2,                    // Número de classes de prioridade
+    lambdas: [2.0, 1.0],     // Taxas de chegada por classe
+    mus: [4.0, 4.0]          // Taxas de serviço por classe
 };
 
 // ==================== UTILITÁRIOS ====================
@@ -188,9 +192,40 @@ function getPWqt(t) {
             return (factorial(N) / factorial(N - n) / factorial(s) / Math.pow(s, n - s)) * Math.pow(a, n) * P0;
         }
     }
+    else if (model === 'priorityNoInterrupt' || model === 'priorityInterrupt') {
+        // Para modelos com prioridade, usamos aproximação M/M/1
+        return P0 * Math.pow(rho, n);
+    }
     else {
         return rho * Math.exp(-mu * (1 - rho) * t);
     }
+}
+
+// ==================== FUNÇÕES AUXILIARES PARA PRIORIDADE ====================
+
+function parseArrayInput(value, defaultValue) {
+    if (!value || value.trim() === '') return defaultValue;
+    const parts = value.split(',').map(x => parseFloat(x.trim()));
+    if (parts.some(isNaN)) return defaultValue;
+    return parts;
+}
+
+function getPriorityParams() {
+    const k = Math.max(1, Math.floor(getNumber('priorityK', 2)));
+    const lambdasStr = document.getElementById('priorityLambdas')?.value || '2.0, 1.0';
+    const musStr = document.getElementById('priorityMus')?.value || '4.0, 4.0';
+    
+    let lambdas = parseArrayInput(lambdasStr, [2.0, 1.0]);
+    let mus = parseArrayInput(musStr, [4.0, 4.0]);
+    
+    // Ajustar tamanhos
+    while (lambdas.length < k) lambdas.push(lambdas[lambdas.length - 1] || 1.0);
+    while (mus.length < k) mus.push(mus[mus.length - 1] || 4.0);
+    
+    lambdas = lambdas.slice(0, k);
+    mus = mus.slice(0, k);
+    
+    return { k, lambdas, mus };
 }
 
 // ==================== CÁLCULO DAS MÉTRICAS ====================
@@ -201,32 +236,32 @@ function updateDynamicFields() {
     dynamicDiv.innerHTML = '';
     
     if (model === 'mms') {
-        dynamicDiv.innerHTML = `<label>🧑‍🤝‍🧑 Número de servidores (s)</label>
+        dynamicDiv.innerHTML = `<label>Número de servidores (s)</label>
                                 <input type="number" id="servers_s" step="1" value="2">`;
     } 
     else if (model === 'mm1k') {
-        dynamicDiv.innerHTML = `<label>📦 Capacidade máxima K</label>
+        dynamicDiv.innerHTML = `<label>Capacidade máxima K</label>
                                 <input type="number" id="capacityK" step="1" value="10">`;
     }
     else if (model === 'mmsk') {
         dynamicDiv.innerHTML = `<div class="param-row">
-                                    <label>🧑‍🤝‍🧑 Servidores (s)</label>
+                                    <label>Servidores (s)</label>
                                     <input type="number" id="servers_s_msk" step="1" value="2">
-                                    <label>📦 Capacidade K</label>
+                                    <label> Capacidade K</label>
                                     <input type="number" id="capacityK_msk" step="1" value="8">
                                 </div>`;
     }
     else if (model === 'mg1') {
-        dynamicDiv.innerHTML = `<label>📉 Variância do tempo de serviço (σ²)</label>
+        dynamicDiv.innerHTML = `<label> Variância do tempo de serviço (σ²)</label>
                                 <input type="number" id="variance_mg1" step="any" value="0.5">`;
     }
     else if (model === 'finitePop') {
-        dynamicDiv.innerHTML = `<label>👥 População total N</label>
+        dynamicDiv.innerHTML = `<label> População total N</label>
                                 <input type="number" id="popN" step="1" value="15">`;
     }
     else if (model === 'mmsFinitePop') {
         dynamicDiv.innerHTML = `
-            <label>🧑‍🤝 Número de servidores (s)</label>
+            <label>  Número de servidores (s)</label>
             <input type="number" id="servers_s_finite" step="1" value="2">
             <label> População total N</label>
             <input type="number" id="popN_finite" step="1" value="15">
@@ -237,6 +272,17 @@ function updateDynamicFields() {
                 <div class="stat-value">${s} / ${K}</div></div>
                 <div class="stat-card"><div class="stat-title">λ efetiva</div>
                 <div class="stat-value">${formatValue(lambda_efetiva)}</div></div>`;
+    }
+    else if (model === 'priorityNoInterrupt' || model === 'priorityInterrupt') {
+        dynamicDiv.innerHTML = `
+            <label>Número de classes de prioridade (k)</label>
+            <input type="number" id="priorityK" step="1" value="2" min="1" max="5">
+            <label>Taxas de chegada por classe (λ₁, λ₂, ...)</label>
+            <input type="text" id="priorityLambdas" placeholder="Ex: 2.0, 1.0, 0.5" value="2.0, 1.0">
+            <label>Taxas de serviço por classe (μ₁, μ₂, ...)</label>
+            <input type="text" id="priorityMus" placeholder="Ex: 4.0, 4.0, 3.0" value="4.0, 4.0">
+            <div class="note">Classe 1 = maior prioridade. As taxas devem ser separadas por vírgula.</div>
+        `;
     }
 }
 
@@ -249,7 +295,9 @@ function updateProbabilityVisibility() {
         'mmsk': { pn: true, pnGr: false, pWt: false, pWqt: false },
         'mg1': { pn: true, pnGr: false, pWt: false, pWqt: false },
         'finitePop': { pn: true, pnGr: false, pWt: false, pWqt: false },
-        'mmsFinitePop': { pn: true, pnGr: false, pWt: false, pWqt: false }
+        'mmsFinitePop': { pn: true, pnGr: false, pWt: false, pWqt: false },
+        'priorityNoInterrupt': { pn: false, pnGr: false, pWt: false, pWqt: false },
+        'priorityInterrupt': { pn: false, pnGr: false, pWt: false, pWqt: false }
     };
     
     const support = supportMap[model] || { pn: true, pnGr: true, pWt: true, pWqt: true };
@@ -449,7 +497,97 @@ function computeAll() {
         // --- W e Wq ---
         W = L / lambda_efetiva;
         Wq = Lq / lambda_efetiva;
-}
+    }
+    // ===== MODELOS COM PRIORIDADE =====
+    else if (model === 'priorityNoInterrupt' || model === 'priorityInterrupt') {
+        const { k, lambdas, mus } = getPriorityParams();
+        
+        // Calcular λ_total e μ médio
+        const lambdaTotal = lambdas.reduce((a, b) => a + b, 0);
+        const muTotal = mus.reduce((a, b) => a + b, 0) / mus.length;
+        
+        // Usar apenas 1 servidor (s=1) para estes modelos
+        s = 1;
+        rho = lambdaTotal / muTotal;
+        
+        if (rho >= 1) {
+            currentState.isStable = false;
+            P0 = 0;
+            L = Infinity;
+            Lq = Infinity;
+            W = Infinity;
+            Wq = Infinity;
+            lambda_efetiva = lambdaTotal;
+        } else {
+            currentState.isStable = true;
+            P0 = 1 - rho;
+            lambda_efetiva = lambdaTotal;
+            
+            // Calcular soma das taxas para cada classe
+            let sumLambdas = [];
+            for (let i = 0; i < k; i++) {
+                let sum = 0;
+                for (let j = 0; j <= i; j++) {
+                    sum += lambdas[j];
+                }
+                sumLambdas.push(sum);
+            }
+            
+            // Cálculo de W para cada classe
+            let Ws = [];
+            let Wqs = [];
+            let Ls = [];
+            let Lqs = [];
+            
+            for (let i = 0; i < k; i++) {
+                const sumLam_i = sumLambdas[i];
+                const sumLam_i_minus_1 = i > 0 ? sumLambdas[i-1] : 0;
+                
+                // Fórmula base para W com interrupção
+                // W = (1/μ) * [ (1 - sum_{i=1}^{k-1} λ_i / (s·μ)) * (1 - sum_{i=1}^{k} λ_i / (s·μ)) ]
+                const denom = (1 - sumLam_i_minus_1 / (s * muTotal)) * (1 - sumLam_i / (s * muTotal));
+                
+                let W_i;
+                if (model === 'priorityInterrupt') {
+                    // COM interrupção
+                    W_i = (1 / muTotal) * (1 / denom);
+                } else {
+                    // SEM interrupção
+                    // W = 1 / ( (s! * (sμ - λ∑r^j)/r^s + sμ) * (1 - sum_{i=1}^{k-1} λ_i/(sμ)) * (1 - sum_{i=1}^{k} λ_i/(sμ)) ) + 1/μ
+                    const r = lambdaTotal / muTotal;
+                    let sumR = 0;
+                    for (let j = 0; j < s; j++) {
+                        sumR += Math.pow(r, j);
+                    }
+                    const numerator = factorial(s) * (s * muTotal - lambdaTotal * sumR) / Math.pow(r, s) + s * muTotal;
+                    W_i = 1 / (numerator * denom) + 1 / muTotal;
+                }
+                
+                Ws.push(W_i);
+                Wqs.push(W_i - 1 / muTotal);
+                Ls.push(lambdas[i] * W_i);
+                Lqs.push(lambdas[i] * Wqs[i]);
+            }
+            
+            // Médias ponderadas para métricas gerais
+            const totalLambda = lambdaTotal;
+            L = Ls.reduce((a, b) => a + b, 0);
+            Lq = Lqs.reduce((a, b) => a + b, 0);
+            W = L / totalLambda;
+            Wq = Lq / totalLambda;
+            
+            // Armazenar métricas por classe para exibição
+            currentState.priorityMetrics = {
+                k,
+                lambdas,
+                mus,
+                Ws,
+                Wqs,
+                Ls,
+                Lqs
+            };
+        }
+    }
     
     // Atualizar estado
     currentState.rho = rho;
@@ -460,7 +598,7 @@ function computeAll() {
     
     // Mostrar resultados
     const stable = currentState.isStable && (rho < 1);
-    document.getElementById('stabilityBadge').innerHTML = stable ? '✅ Sistema estável' : '⚠️ Instável (ρ ≥ 1)';
+    document.getElementById('stabilityBadge').innerHTML = stable ? 'Sistema estável' : 'Instável (ρ ≥ 1)';
     
     if (!stable) {
         document.getElementById('rhoVal').innerHTML = rho.toFixed(4);
@@ -469,7 +607,7 @@ function computeAll() {
         document.getElementById('Lqval').innerHTML = '∞';
         document.getElementById('Wval').innerHTML = '∞';
         document.getElementById('Wqval').innerHTML = '∞';
-        document.getElementById('extraMetrics').innerHTML = '<div class="note">⚠️ Sistema instável! Aumente μ ou reduza λ.</div>';
+        document.getElementById('extraMetrics').innerHTML = '<div class="note">Sistema instável! Aumente μ ou reduza λ.</div>';
         updateProbabilityVisibility();
         return;
     }
@@ -495,6 +633,43 @@ function computeAll() {
     } else if (model === 'finitePop') {
         extra = `<div class="stat-card"><div class="stat-title">População N</div><div class="stat-value">${K}</div></div>
                  <div class="stat-card"><div class="stat-title">λ efetiva</div><div class="stat-value">${formatValue(lambda_efetiva)}</div></div>`;
+    }
+    // ===== NOVOS MODELOS COM PRIORIDADE =====
+    else if (model === 'priorityNoInterrupt' || model === 'priorityInterrupt') {
+        const pm = currentState.priorityMetrics;
+        if (pm && pm.k) {
+            let html = `<div class="stat-card"><div class="stat-title">Classes k</div><div class="stat-value">${pm.k}</div></div>
+                        <div class="stat-card"><div class="stat-title">λ total / μ médio</div><div class="stat-value">${formatValue(lambda)} / ${formatValue(mu)}</div></div>`;
+            
+            // Tabela por classe
+            html += `<div style="margin-top:12px;overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+                            <thead>
+                                <tr style="background:#e8f0f5;">
+                                    <th style="padding:6px 8px;text-align:left;">Classe</th>
+                                    <th style="padding:6px 8px;text-align:center;">λ</th>
+                                    <th style="padding:6px 8px;text-align:center;">μ</th>
+                                    <th style="padding:6px 8px;text-align:center;">W</th>
+                                    <th style="padding:6px 8px;text-align:center;">Wq</th>
+                                    <th style="padding:6px 8px;text-align:center;">L</th>
+                                    <th style="padding:6px 8px;text-align:center;">Lq</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+            for (let i = 0; i < pm.k; i++) {
+                html += `<tr style="border-bottom:1px solid #e2e8f0;">
+                            <td style="padding:4px 8px;font-weight:600;">${i+1}</td>
+                            <td style="padding:4px 8px;text-align:center;">${formatValue(pm.lambdas[i])}</td>
+                            <td style="padding:4px 8px;text-align:center;">${formatValue(pm.mus[i])}</td>
+                            <td style="padding:4px 8px;text-align:center;">${formatValue(pm.Ws[i])}</td>
+                            <td style="padding:4px 8px;text-align:center;">${formatValue(pm.Wqs[i])}</td>
+                            <td style="padding:4px 8px;text-align:center;">${formatValue(pm.Ls[i])}</td>
+                            <td style="padding:4px 8px;text-align:center;">${formatValue(pm.Lqs[i])}</td>
+                        </tr>`;
+            }
+            html += `</tbody></table></div>`;
+            extra = html;
+        }
     }
     
     document.getElementById('extraMetrics').innerHTML = extra;
