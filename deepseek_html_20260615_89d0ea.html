@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Teoria de Filas: Calculadora Kendall-Lee | M/M/1, M/G/1, M/M/s, Filas Finitas</title>
+    <!-- MathJax for beautiful rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+        }
+        body {
+            background: #eef2f7;
+            margin: 0;
+            padding: 24px 16px;
+        }
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #1a2a3a, #0f2b3d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0 0 6px 0;
+        }
+        .sub {
+            color: #2c3e4e;
+            margin-bottom: 28px;
+            border-left: 4px solid #2c7da0;
+            padding-left: 16px;
+            font-weight: 500;
+        }
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+        .control-panel {
+            flex: 1.2;
+            min-width: 280px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+            padding: 20px 24px;
+            align-self: start;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .results-panel {
+            flex: 2.2;
+            min-width: 320px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+            padding: 20px 24px;
+        }
+        .model-selector {
+            margin-bottom: 28px;
+        }
+        label {
+            font-weight: 600;
+            color: #1f3b4c;
+            display: block;
+            margin-top: 14px;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+        }
+        select, input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 18px;
+            border: 1px solid #cbd5e1;
+            background: #fefefe;
+            font-size: 0.95rem;
+            transition: 0.2s;
+            outline: none;
+        }
+        select:focus, input:focus {
+            border-color: #2c7da0;
+            box-shadow: 0 0 0 3px rgba(44,125,160,0.2);
+        }
+        .param-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .param-row > div {
+            flex: 1;
+        }
+        button {
+            margin-top: 24px;
+            background: #1f6392;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            width: 100%;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            background: #0e4b6e;
+            transform: scale(0.98);
+        }
+        .stat-card {
+            background: #f8fafc;
+            border-radius: 24px;
+            padding: 16px 20px;
+            margin-bottom: 18px;
+            border-left: 6px solid #2c7da0;
+        }
+        .stat-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #2c7da0;
+            letter-spacing: 1px;
+        }
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #0a2f44;
+            word-break: break-word;
+            line-height: 1.2;
+        }
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .note {
+            font-size: 0.75rem;
+            color: #4b6a7c;
+            background: #ecf7ff;
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-top: 20px;
+        }
+        hr {
+            margin: 18px 0;
+            border-color: #e2edf2;
+        }
+        .badge {
+            background: #d4e7f0;
+            border-radius: 40px;
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+        footer {
+            text-align: center;
+            margin-top: 32px;
+            font-size: 0.75rem;
+            color: #5f7f8f;
+        }
+        @media (max-width: 780px) {
+            .grid-2col { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>📊 Filas · Kendall-Lee</h1>
+    <div class="sub">M/M/1 · M/M/s · M/M/1/K · M/M/s/K · M/G/1 · População Finita</div>
+
+    <div class="dashboard">
+        <div class="control-panel">
+            <div class="model-selector">
+                <label>📌 Modelo de fila</label>
+                <select id="modelType">
+                    <option value="mm1">M/M/1   (Fila infinita, 1 servidor)</option>
+                    <option value="mms">M/M/s   (s servidores paralelos)</option>
+                    <option value="mm1k">M/M/1/K (Capacidade finita K)</option>
+                    <option value="mmsk">M/M/s/K (s servidores, capacidade K)</option>
+                    <option value="mg1">M/G/1   (Pollaczek-Khintchine)</option>
+                    <option value="finitePop">M/M/1 com população finita N</option>
+                </select>
+            </div>
+
+            <label>📈 λ (taxa de chegadas / unid tempo)</label>
+            <input type="number" id="lambda" step="any" value="3.0" placeholder="ex: 3.0">
+
+            <label>⚙️ μ (taxa de serviço / unid tempo)</label>
+            <input type="number" id="mu" step="any" value="4.0" placeholder="ex: 4.0">
+
+            <div id="dynamicParams"></div>
+
+            <button id="calcBtn">⟳ Calcular métricas</button>
+            <div class="note">
+                💡 Dica: ρ = λ/(s·μ) para M/M/s. Condição estável automática.
+                <br>✔️ M/G/1 utiliza variância (σ²) — valor padrão 0.5 (exemplo).
+            </div>
+        </div>
+
+        <div class="results-panel" id="resultsPanel">
+            <div style="display: flex; justify-content: space-between; align-items:center;">
+                <h3 style="margin:0 0 12px 0;">📐 Medidas de Efetividade</h3>
+                <span class="badge" id="stabilityBadge">⚖️ Estável</span>
+            </div>
+            <div id="metricsContainer">
+                <div class="stat-card"><div class="stat-title">ρ (ocupação)</div><div class="stat-value" id="rhoVal">—</div></div>
+                <div class="grid-2col">
+                    <div class="stat-card"><div class="stat-title">L (sistema)</div><div class="stat-value" id="Lval">—</div></div>
+                    <div class="stat-card"><div class="stat-title">Lq (fila)</div><div class="stat-value" id="Lqval">—</div></div>
+                    <div class="stat-card"><div class="stat-title">W (sistema)</div><div class="stat-value" id="Wval">—</div></div>
+                    <div class="stat-card"><div class="stat-title">Wq (fila)</div><div class="stat-value" id="Wqval">—</div></div>
+                </div>
+                <div class="stat-card"><div class="stat-title">P0 (ocioso)</div><div class="stat-value" id="P0val">—</div></div>
+                <div id="extraMetrics" style="margin-top: 8px;"></div>
+            </div>
+        </div>
+    </div>
+    <footer>Fórmulas implementadas com base na notação de Kendall-Lee. Cálculos matemáticos precisos.</footer>
+</div>
+
+<script src="queueing_theory.js"></script>
+</body>
+</html>
