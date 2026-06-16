@@ -176,6 +176,18 @@ function getPWqt(t) {
         const theta = (2 * mu * (1 - rho)) / (1 + c_squared);
         return rho * Math.exp(-theta * t);
     }
+    else if (model === 'mmsFinitePop') {
+        const N = K; // K será usado como população total
+        const s = currentState.s;
+        const a = lambda / mu;
+        if (n > N) return 0;
+        
+        if (n <= s) {
+            return (factorial(N) / factorial(N - n) / factorial(n)) * Math.pow(a, n) * P0;
+        } else {
+            return (factorial(N) / factorial(N - n) / factorial(s) / Math.pow(s, n - s)) * Math.pow(a, n) * P0;
+        }
+    }
     else {
         return rho * Math.exp(-mu * (1 - rho) * t);
     }
@@ -211,6 +223,20 @@ function updateDynamicFields() {
     else if (model === 'finitePop') {
         dynamicDiv.innerHTML = `<label>👥 População total N</label>
                                 <input type="number" id="popN" step="1" value="15">`;
+    }
+    else if (model === 'mmsFinitePop') {
+        dynamicDiv.innerHTML = `
+            <label>🧑‍🤝 Número de servidores (s)</label>
+            <input type="number" id="servers_s_finite" step="1" value="2">
+            <label> População total N</label>
+            <input type="number" id="popN_finite" step="1" value="15">
+        `;
+    }
+    else if (model === 'mmsFinitePop') {
+        extra = `<div class="stat-card"><div class="stat-title">Servidores s / População N</div>
+                <div class="stat-value">${s} / ${K}</div></div>
+                <div class="stat-card"><div class="stat-title">λ efetiva</div>
+                <div class="stat-value">${formatValue(lambda_efetiva)}</div></div>`;
     }
 }
 
@@ -354,6 +380,53 @@ function computeAll() {
         W = L / lambda_efetiva;
         Wq = Lq / lambda_efetiva;
     }
+    else if (model === 'mmsFinitePop') {
+        const N = Math.max(1, Math.floor(getNumber('popN_finite', 15)));
+        const s = Math.max(1, Math.floor(getNumber('servers_s_finite', 2)));
+        const a = lambda / mu;
+        
+        K = N;
+        currentState.s = s;
+        currentState.isStable = true; // População finita sempre estável
+        
+        // --- Cálculo de P₀ ---
+        let sumP0 = 0;
+        
+        // Primeiro somatório: n = 0 até s-1
+        for (let n = 0; n < s; n++) {
+            sumP0 += (factorial(N) / factorial(N - n) / factorial(n)) * Math.pow(a, n);
+        }
+        
+        // Segundo somatório: n = s até N
+        for (let n = s; n <= N; n++) {
+            sumP0 += (factorial(N) / factorial(N - n) / factorial(s) / Math.pow(s, n - s)) * Math.pow(a, n);
+        }
+        
+        P0 = 1 / sumP0;
+        
+        // --- Cálculo de L (número médio no sistema) ---
+        let L = 0;
+        for (let n = 1; n <= N; n++) {
+            let pn;
+            if (n <= s) {
+                pn = (factorial(N) / factorial(N - n) / factorial(n)) * Math.pow(a, n) * P0;
+            } else {
+                pn = (factorial(N) / factorial(N - n) / factorial(s) / Math.pow(s, n - s)) * Math.pow(a, n) * P0;
+            }
+            L += n * pn;
+        }
+        
+        // --- Taxa efetiva de chegada ---
+        lambda_efetiva = lambda * (N - L);
+        
+        // --- Lq (fila) ---
+        Lq = L - (a) * (N - L);
+        if (Lq < 0) Lq = 0;
+        
+        // --- W e Wq ---
+        W = L / lambda_efetiva;
+        Wq = Lq / lambda_efetiva;
+}
     
     // Atualizar estado
     currentState.rho = rho;
