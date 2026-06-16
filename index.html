@@ -1,11 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Teoria de Filas: Calculadora Kendall-Lee | M/M/1, M/G/1, M/M/s, Filas Finitas</title>
-    <!-- MathJax for beautiful rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
+    <title>Teoria de Filas - Calculadora Completa com Probabilidades</title>
     <style>
         * {
             box-sizing: border-box;
@@ -17,7 +15,7 @@
             padding: 24px 16px;
         }
         .app-container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
         h1 {
@@ -42,8 +40,8 @@
             gap: 24px;
         }
         .control-panel {
-            flex: 1.2;
-            min-width: 280px;
+            flex: 1;
+            min-width: 300px;
             background: white;
             border-radius: 28px;
             box-shadow: 0 12px 28px rgba(0,0,0,0.08);
@@ -52,15 +50,12 @@
             border: 1px solid rgba(0,0,0,0.05);
         }
         .results-panel {
-            flex: 2.2;
-            min-width: 320px;
+            flex: 2;
+            min-width: 500px;
             background: white;
             border-radius: 28px;
             box-shadow: 0 12px 28px rgba(0,0,0,0.08);
             padding: 20px 24px;
-        }
-        .model-selector {
-            margin-bottom: 28px;
         }
         label {
             font-weight: 600;
@@ -78,23 +73,14 @@
             border: 1px solid #cbd5e1;
             background: #fefefe;
             font-size: 0.95rem;
-            transition: 0.2s;
             outline: none;
         }
         select:focus, input:focus {
             border-color: #2c7da0;
             box-shadow: 0 0 0 3px rgba(44,125,160,0.2);
         }
-        .param-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .param-row > div {
-            flex: 1;
-        }
         button {
-            margin-top: 24px;
+            margin-top: 20px;
             background: #1f6392;
             color: white;
             border: none;
@@ -105,7 +91,6 @@
             font-size: 1rem;
             cursor: pointer;
             transition: 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         button:hover {
             background: #0e4b6e;
@@ -113,9 +98,9 @@
         }
         .stat-card {
             background: #f8fafc;
-            border-radius: 24px;
+            border-radius: 20px;
             padding: 16px 20px;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             border-left: 6px solid #2c7da0;
         }
         .stat-title {
@@ -126,28 +111,24 @@
             letter-spacing: 1px;
         }
         .stat-value {
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             font-weight: 800;
             color: #0a2f44;
-            word-break: break-word;
-            line-height: 1.2;
+        }
+        .stat-value-small {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0a2f44;
         }
         .grid-2col {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
         }
-        .note {
-            font-size: 0.75rem;
-            color: #4b6a7c;
-            background: #ecf7ff;
-            border-radius: 20px;
-            padding: 12px 16px;
-            margin-top: 20px;
-        }
-        hr {
-            margin: 18px 0;
-            border-color: #e2edf2;
+        .grid-4col {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
         }
         .badge {
             background: #d4e7f0;
@@ -157,70 +138,166 @@
             font-weight: bold;
             display: inline-block;
         }
+        .probability-section {
+            background: linear-gradient(135deg, #f0f7fa 0%, #e8f0f5 100%);
+            border-radius: 24px;
+            padding: 20px;
+            margin-top: 24px;
+        }
+        .probability-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1f3b4c;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #2c7da0;
+            display: inline-block;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .input-group input {
+            flex: 2;
+            margin: 0;
+        }
+        .input-group button {
+            flex: 1;
+            margin: 0;
+            padding: 10px;
+            font-size: 0.85rem;
+        }
+        .result-display {
+            background: white;
+            border-radius: 16px;
+            padding: 12px;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #1f6392;
+            border: 1px solid #cbd5e1;
+        }
+        .note {
+            font-size: 0.75rem;
+            color: #4b6a7c;
+            background: #ecf7ff;
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-top: 16px;
+        }
         footer {
             text-align: center;
             margin-top: 32px;
             font-size: 0.75rem;
             color: #5f7f8f;
         }
-        @media (max-width: 780px) {
-            .grid-2col { grid-template-columns: 1fr; }
+        @media (max-width: 1024px) {
+            .grid-4col { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .grid-2col, .grid-4col { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 <div class="app-container">
-    <h1>📊 Filas · Kendall-Lee</h1>
-    <div class="sub">M/M/1 · M/M/s · M/M/1/K · M/M/s/K · M/G/1 · População Finita</div>
+    <h1>📊 Teoria de Filas · Kendall-Lee</h1>
+    <div class="sub">M/M/1 · M/M/s · M/M/1/K · M/M/s/K · M/G/1 · População Finita | P(n), P(n>r), P(W>t), P(Wq>t)</div>
 
     <div class="dashboard">
         <div class="control-panel">
-            <div class="model-selector">
-                <label>📌 Modelo de fila</label>
-                <select id="modelType">
-                    <option value="mm1">M/M/1   (Fila infinita, 1 servidor)</option>
-                    <option value="mms">M/M/s   (s servidores paralelos)</option>
-                    <option value="mm1k">M/M/1/K (Capacidade finita K)</option>
-                    <option value="mmsk">M/M/s/K (s servidores, capacidade K)</option>
-                    <option value="mg1">M/G/1   (Pollaczek-Khintchine)</option>
-                    <option value="finitePop">M/M/1 com população finita N</option>
-                </select>
-            </div>
+            <label>📌 Modelo de fila</label>
+            <select id="modelType">
+                <option value="mm1">M/M/1 (Fila infinita, 1 servidor)</option>
+                <option value="mms">M/M/s (s servidores paralelos)</option>
+                <option value="mm1k">M/M/1/K (Capacidade finita K)</option>
+                <option value="mmsk">M/M/s/K (s servidores, capacidade K)</option>
+                <option value="mg1">M/G/1 (Pollaczek-Khintchine)</option>
+                <option value="finitePop">M/M/1 com população finita N</option>
+            </select>
 
-            <label>📈 λ (taxa de chegadas / unid tempo)</label>
-            <input type="number" id="lambda" step="any" value="3.0" placeholder="ex: 3.0">
+            <label>📈 λ (taxa de chegadas / tempo)</label>
+            <input type="number" id="lambda" step="any" value="3.0" placeholder="λ">
 
-            <label>⚙️ μ (taxa de serviço / unid tempo)</label>
-            <input type="number" id="mu" step="any" value="4.0" placeholder="ex: 4.0">
+            <label>⚙️ μ (taxa de serviço / tempo)</label>
+            <input type="number" id="mu" step="any" value="4.0" placeholder="μ">
 
             <div id="dynamicParams"></div>
 
-            <button id="calcBtn">⟳ Calcular métricas</button>
+            <button id="calcBtn">⟳ Calcular todas as métricas</button>
             <div class="note">
-                💡 Dica: ρ = λ/(s·μ) para M/M/s. Condição estável automática.
-                <br>✔️ M/G/1 utiliza variância (σ²) — valor padrão 0.5 (exemplo).
+                💡 ρ = λ/(s·μ). Para M/G/1 informe a variância σ².<br>
+                ✔️ As probabilidades são recalculadas automaticamente ao alterar n, r ou t.
             </div>
         </div>
 
-        <div class="results-panel" id="resultsPanel">
-            <div style="display: flex; justify-content: space-between; align-items:center;">
-                <h3 style="margin:0 0 12px 0;">📐 Medidas de Efetividade</h3>
+        <div class="results-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0 0 12px 0;">📐 Medidas de Efetividade</h3>
                 <span class="badge" id="stabilityBadge">⚖️ Estável</span>
             </div>
-            <div id="metricsContainer">
-                <div class="stat-card"><div class="stat-title">ρ (ocupação)</div><div class="stat-value" id="rhoVal">—</div></div>
-                <div class="grid-2col">
-                    <div class="stat-card"><div class="stat-title">L (sistema)</div><div class="stat-value" id="Lval">—</div></div>
-                    <div class="stat-card"><div class="stat-title">Lq (fila)</div><div class="stat-value" id="Lqval">—</div></div>
-                    <div class="stat-card"><div class="stat-title">W (sistema)</div><div class="stat-value" id="Wval">—</div></div>
-                    <div class="stat-card"><div class="stat-title">Wq (fila)</div><div class="stat-value" id="Wqval">—</div></div>
+
+            <div class="grid-2col">
+                <div class="stat-card"><div class="stat-title">ρ (Ocupação)</div><div class="stat-value" id="rhoVal">—</div></div>
+                <div class="stat-card"><div class="stat-title">P0 (Sistema ocioso)</div><div class="stat-value" id="P0val">—</div></div>
+                <div class="stat-card"><div class="stat-title">L (Nº médio no sistema)</div><div class="stat-value" id="Lval">—</div></div>
+                <div class="stat-card"><div class="stat-title">Lq (Nº médio na fila)</div><div class="stat-value" id="Lqval">—</div></div>
+                <div class="stat-card"><div class="stat-title">W (Tempo médio no sistema)</div><div class="stat-value" id="Wval">—</div></div>
+                <div class="stat-card"><div class="stat-title">Wq (Tempo médio na fila)</div><div class="stat-value" id="Wqval">—</div></div>
+            </div>
+            <div id="extraMetrics"></div>
+
+            <!-- Seção de Probabilidades -->
+            <div class="probability-section">
+                <div class="probability-title">🎲 Probabilidades Avançadas</div>
+                
+                <div class="grid-4col">
+                    <!-- P(n) -->
+                    <div class="stat-card">
+                        <div class="stat-title">P(n) - Prob. de n clientes</div>
+                        <div class="input-group">
+                            <input type="number" id="nValue" step="any" value="2" placeholder="n">
+                            <button id="calcPnBtn">Calcular P(n)</button>
+                        </div>
+                        <div class="result-display" id="PnResult">—</div>
+                    </div>
+
+                    <!-- P(n > r) -->
+                    <div class="stat-card">
+                        <div class="stat-title">P(n > r) - Prob. mais que r</div>
+                        <div class="input-group">
+                            <input type="number" id="rValue" step="any" value="3" placeholder="r">
+                            <button id="calcPnGrBtn">Calcular P(n>r)</button>
+                        </div>
+                        <div class="result-display" id="PnGrResult">—</div>
+                    </div>
+
+                    <!-- P(W > t) -->
+                    <div class="stat-card">
+                        <div class="stat-title">P(W > t) - Tempo sistema > t</div>
+                        <div class="input-group">
+                            <input type="number" id="tValueW" step="any" value="0.5" placeholder="t">
+                            <button id="calcPWtBtn">Calcular P(W>t)</button>
+                        </div>
+                        <div class="result-display" id="PWtResult">—</div>
+                    </div>
+
+                    <!-- P(Wq > t) -->
+                    <div class="stat-card">
+                        <div class="stat-title">P(Wq > t) - Espera fila > t</div>
+                        <div class="input-group">
+                            <input type="number" id="tValueWq" step="any" value="0.5" placeholder="t">
+                            <button id="CalcPWqtBtn">Calcular P(Wq>t)</button>
+                        </div>
+                        <div class="result-display" id="PWqtResult">—</div>
+                    </div>
                 </div>
-                <div class="stat-card"><div class="stat-title">P0 (ocioso)</div><div class="stat-value" id="P0val">—</div></div>
-                <div id="extraMetrics" style="margin-top: 8px;"></div>
             </div>
         </div>
     </div>
-    <footer>Fórmulas implementadas com base na notação de Kendall-Lee. Cálculos matemáticos precisos.</footer>
+    <footer>Fórmulas baseadas na notação de Kendall-Lee. Cálculos precisos conforme cada modelo.</footer>
 </div>
 
 <script src="queueing_theory.js"></script>
