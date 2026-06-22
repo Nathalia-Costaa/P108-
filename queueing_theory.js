@@ -290,14 +290,14 @@ function updateProbabilityVisibility() {
     const model = currentState.model;
     const supportMap = {
         'mm1': { pn: true, pnGr: true, pWt: true, pWqt: true },
-        'mms': { pn: true, pnGr: false, pWt: true, pWqt: true },
-        'mm1k': { pn: true, pnGr: false, pWt: false, pWqt: false },
-        'mmsk': { pn: true, pnGr: false, pWt: false, pWqt: false },
-        'mg1': { pn: true, pnGr: false, pWt: false, pWqt: false },
-        'finitePop': { pn: true, pnGr: false, pWt: false, pWqt: false },
-        'mmsFinitePop': { pn: true, pnGr: false, pWt: false, pWqt: false },
-        'priorityNoInterrupt': { pn: false, pnGr: false, pWt: false, pWqt: false },
-        'priorityInterrupt': { pn: false, pnGr: false, pWt: false, pWqt: false }
+        'mms': { pn: true, pnGr: true, pWt: true, pWqt: true },
+        'mm1k': { pn: true, pnGr: true, pWt: true, pWqt: true },
+        'mmsk': { pn: true, pnGr: true, pWt: true, pWqt: true },
+        'mg1': { pn: true, pnGr: true, pWt: true, pWqt: true },
+        'finitePop': { pn: true, pnGr: true, pWt: true, pWqt: true },
+        'mmsFinitePop': { pn: true, pnGr: true, pWt: true, pWqt: true },
+        'priorityNoInterrupt': { pn: true, pnGr: true, pWt: true, pWqt: true },
+        'priorityInterrupt': { pn: true, pnGr: true, pWt: true, pWqt: true }
     };
     
     const support = supportMap[model] || { pn: true, pnGr: true, pWt: true, pWqt: true };
