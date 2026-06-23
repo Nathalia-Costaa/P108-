@@ -212,7 +212,6 @@ function parseArrayInput(value, defaultValue) {
 
 function getPriorityParams() {
     const k = Math.max(1, Math.floor(getNumber('priorityK', 2)));
-    const s = Math.max(1, Math.floor(getNumber('priorityServers', 1))); // NOVO
     const lambdasStr = document.getElementById('priorityLambdas')?.value || '2.0, 1.0';
     const musStr = document.getElementById('priorityMus')?.value || '4.0, 4.0';
     
@@ -226,7 +225,7 @@ function getPriorityParams() {
     lambdas = lambdas.slice(0, k);
     mus = mus.slice(0, k);
     
-    return { k, s, lambdas, mus }; // ADICIONAR 's' no retorno
+    return { k, lambdas, mus };
 }
 
 // ==================== CÁLCULO DAS MÉTRICAS ====================
@@ -276,8 +275,6 @@ function updateDynamicFields() {
     }
     else if (model === 'priorityNoInterrupt' || model === 'priorityInterrupt') {
         dynamicDiv.innerHTML = `
-            <label>Número de servidores (s)</label>
-            <input type="number" id="priorityServers" step="1" value="1" min="1">
             <label>Número de classes de prioridade (k)</label>
             <input type="number" id="priorityK" step="1" value="2" min="1" max="5">
             <label>Taxas de chegada por classe (λ₁, λ₂, ...)</label>
@@ -503,16 +500,15 @@ function computeAll() {
     }
     // ===== MODELOS COM PRIORIDADE =====
     else if (model === 'priorityNoInterrupt' || model === 'priorityInterrupt') {
-        const { k, s, lambdas, mus } = getPriorityParams(); // ADICIONAR 's'
+        const { k, lambdas, mus } = getPriorityParams();
         
-        // Calcular λ_total
+        // Calcular λ_total e μ médio
         const lambdaTotal = lambdas.reduce((a, b) => a + b, 0);
-        
-        // Calcular μ efetivo (média ponderada ou simples)
         const muTotal = mus.reduce((a, b) => a + b, 0) / mus.length;
         
-        // USAR O s OBTIDO
-        rho = lambdaTotal / (s * muTotal); // ALTERADO
+        // Usar apenas 1 servidor (s=1) para estes modelos
+        s = 1;
+        rho = lambdaTotal / muTotal;
         
         if (rho >= 1) {
             currentState.isStable = false;
@@ -524,19 +520,8 @@ function computeAll() {
             lambda_efetiva = lambdaTotal;
         } else {
             currentState.isStable = true;
+            P0 = 1 - rho;
             lambda_efetiva = lambdaTotal;
-
-            // Calcular P0 correto para M/M/s (ADICIONAR ESTE BLOCO)
-            if (s === 1) {
-                P0 = 1 - rho;
-            } else {
-                let sumP0 = 0;
-                for (let n = 0; n < s; n++) {
-                    sumP0 += Math.pow(lambdaTotal / muTotal, n) / factorial(n);
-                }
-                const termoS = Math.pow(lambdaTotal / muTotal, s) / factorial(s) * (1 / (1 - rho));
-                P0 = 1 / (sumP0 + termoS);
-            }
             
             // Calcular soma das taxas para cada classe
             let sumLambdas = [];
@@ -558,34 +543,24 @@ function computeAll() {
                 const sumLam_i = sumLambdas[i];
                 const sumLam_i_minus_1 = i > 0 ? sumLambdas[i-1] : 0;
                 
-                // CORRIGIDO: Usar s nos denominadores
+                // Fórmula base para W com interrupção
+                // W = (1/μ) * [ (1 - sum_{i=1}^{k-1} λ_i / (s·μ)) * (1 - sum_{i=1}^{k} λ_i / (s·μ)) ]
                 const denom = (1 - sumLam_i_minus_1 / (s * muTotal)) * (1 - sumLam_i / (s * muTotal));
                 
                 let W_i;
                 if (model === 'priorityInterrupt') {
-                    if (s === 1) {
-                        // Fórmula simplificada para s=1
-                        W_i = (1 / muTotal) / denom;
-                    } else {
-                        // Fórmula completa para s>1 (com interrupção)
-                        const combined = mmsMetrics(Lam_i, muTotal, s);
-                        let W_i;
-                        if (i === 0) {
-                            W_i = combined.W;                                          // classe 1 nunca é preterida
-                        } else {
-                            W_i = (Lam_i / lambdas[i]) * combined.W - weightedSum / lambdas[i];
-                        }
-                        weightedSum += lambdas[i] * W_i;
-                    }
+                    // COM interrupção
+                    W_i = (1 / muTotal) * (1 / denom);
                 } else {
-                    // SEM interrupção - adaptado para s servidores
+                    // SEM interrupção
+                    // W = 1 / ( (s! * (sμ - λ∑r^j)/r^s + sμ) * (1 - sum_{i=1}^{k-1} λ_i/(sμ)) * (1 - sum_{i=1}^{k} λ_i/(sμ)) ) + 1/μ
                     const r = lambdaTotal / muTotal;
                     let sumR = 0;
                     for (let j = 0; j < s; j++) {
-                        sumR += Math.pow(r, j) / factorial(j);           // agora com /j!
+                        sumR += Math.pow(r, j);
                     }
-                    const term = factorial(s) * (s * muTotal - lambdaTotal) / Math.pow(r, s) * sumR + s * muTotal;
-                    const W_i = 1 / (term * (1 - A) * (1 - B)) + 1 / muTotal;
+                    const numerator = factorial(s) * (s * muTotal - lambdaTotal * sumR) / Math.pow(r, s) + s * muTotal;
+                    W_i = 1 / (numerator * denom) + 1 / muTotal;
                 }
                 
                 Ws.push(W_i);
@@ -604,18 +579,13 @@ function computeAll() {
             // Armazenar métricas por classe para exibição
             currentState.priorityMetrics = {
                 k,
-                s, // ADICIONAR s
                 lambdas,
                 mus,
                 Ws,
                 Wqs,
                 Ls,
-                Lqs,
-                P0: P0
+                Lqs
             };
-            
-            // ATUALIZAR currentState.s
-            currentState.s = s;
         }
     }
     
@@ -668,11 +638,9 @@ function computeAll() {
     else if (model === 'priorityNoInterrupt' || model === 'priorityInterrupt') {
         const pm = currentState.priorityMetrics;
         if (pm && pm.k) {
-            let html = `<div class="stat-card"><div class="stat-title">Servidores s</div><div class="stat-value">${pm.s}</div></div>
-            <div class="stat-card"><div class="stat-title">Classes k</div><div class="stat-value">${pm.k}</div></div>
-            <div class="stat-card"><div class="stat-title">λ total / μ médio</div><div class="stat-value">${formatValue(lambda)} / ${formatValue(mu)}</div></div>
-            <div class="stat-card"><div class="stat-title">P0</div><div class="stat-value">${formatValue(pm.P0)}</div></div>`;
-
+            let html = `<div class="stat-card"><div class="stat-title">Classes k</div><div class="stat-value">${pm.k}</div></div>
+                        <div class="stat-card"><div class="stat-title">λ total / μ médio</div><div class="stat-value">${formatValue(lambda)} / ${formatValue(mu)}</div></div>`;
+            
             // Tabela por classe
             html += `<div style="margin-top:12px;overflow-x:auto;">
                         <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
